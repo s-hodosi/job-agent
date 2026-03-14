@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+crewai
+crewai_tools
+langchain
+langchain-google-genai
+google-generativeai
+tavily-python
+python-dotenv
+pydantic

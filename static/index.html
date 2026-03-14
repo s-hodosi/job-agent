@@ -1,0 +1,247 @@
+<html>
+
+<head>
+
+    <title>AI Job Evaluator</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            margin: 40px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: auto;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 20px;
+            font-size: 16px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .section-title {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .progress {
+            background: #e5e7eb;
+            height: 18px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .progress-bar {
+            background: #22c55e;
+            height: 100%;
+        }
+
+        ul {
+            margin-top: 5px;
+        }
+
+        .loading {
+            font-style: italic;
+            color: #555;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>AI Job Evaluator</h1>
+
+        <div class="card">
+
+            <h3>Job Description</h3>
+            <textarea id="jd" rows="10"></textarea>
+
+            <h3>CV</h3>
+            <textarea id="cv" rows="10"></textarea>
+
+            <button onclick="run()">Analyze</button>
+
+        </div>
+
+        <div id="result"></div>
+
+    </div>
+
+    <script>
+
+        function renderList(items) {
+            if (!items) return "<i>None</i>"
+            if (Array.isArray(items)) {
+                return "<ul>" + items.map(x => "<li>" + x + "</li>").join("") + "</ul>"
+            }
+            return items
+        }
+
+        function renderObject(obj) {
+
+            if (typeof obj !== "object") return obj
+
+            let html = "<ul>"
+
+            for (const key in obj) {
+                html += "<li><b>" + key + "</b>: " + renderObject(obj[key]) + "</li>"
+            }
+
+            html += "</ul>"
+
+            return html
+        }
+
+        async function run() {
+
+            document.getElementById("result").innerHTML =
+                "<div class='card'>Analyzing...</div>"
+
+            const jd = document.getElementById("jd").value
+            const cv = document.getElementById("cv").value
+
+            const res = await fetch("/analyze", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    cv: cv,
+                    job_description: jd
+                })
+            })
+
+            const data = await res.json()
+
+            let json = data.result
+
+            let html = ""
+
+            if (json.match_score) {
+
+                html += `
+ <div class="card">
+ <div class="section-title">Candidate Match</div>
+
+ <b>Match Score</b><br>
+ ${json.match_score}%
+
+ <h4>Key Matches</h4>
+ ${renderList(json.key_matches)}
+
+ <h4>Skill Gaps</h4>
+ ${renderList(json.skill_gaps)}
+
+ <h4>Estimated Seniority</h4>
+ ${json.seniority_estimate || ""}
+ </div>
+ `
+            }
+
+            if (json.company_summary) {
+
+                html += `
+ <div class="card">
+ <div class="section-title">Market Research</div>
+
+ <b>Company Summary</b><br>
+ ${json.company_summary || ""}
+
+ <br><br>
+
+ <b>Company Health</b><br>
+ ${json.company_health || ""}
+
+ <br><br>
+
+ <b>Company Culture</b><br>
+ ${json.company_culture || ""}
+ </div>
+ `
+            }
+
+            html += `
+<div class="card">
+<div class="section-title">Salary Estimate</div>
+
+<b>Estimated Range</b><br>
+${json.salary_low} - ${json.salary_high} ${json.currency}
+
+<br><br>
+
+<b>Confidence</b><br>
+${json.confidence}
+
+<br><br>
+
+<b>Sources</b>
+${renderList(json.sources)}
+
+</div>
+`
+
+            if (json.offer_probability || json.recommendation) {
+
+                html += `
+ <div class="card">
+ <div class="section-title">Career Evaluation</div>
+
+ <b>Offer Probability</b><br>
+ ${json.offer_probability || ""}
+
+ <br><br>
+
+ <b>Career Value</b><br>
+ ${renderObject(json.career_value)}
+
+ <br><br>
+
+ <b>Risks</b>
+ ${renderList(json.risks)}
+
+ <br>
+
+ <b>Recommendation</b><br>
+ ${json.recommendation || ""}
+ </div>
+ `
+            }
+
+            document.getElementById("result").innerHTML = html
+
+        }
+
+    </script>
+
+</body>
+
+</html>
